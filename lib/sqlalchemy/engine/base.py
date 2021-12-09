@@ -1234,8 +1234,10 @@ class Connection(Connectable):
             tuple or scalar positional parameters.
 
         """
-
+        self._log_info(f'statement: {statement}, {type(statement)}')
+        self._log_info(util.string_types)
         if isinstance(statement, util.string_types):
+            self._log_info('DEPRECATED!!!')
             util.warn_deprecated_20(
                 "Passing a string to Connection.execute() is "
                 "deprecated and will be removed in version 2.0.  Use the "
@@ -1412,6 +1414,7 @@ class Connection(Connectable):
         distilled_params = _distill_params(self, multiparams, params)
 
         has_events = self._has_events or self.engine._has_events
+        self._log_info(f'has_events: {has_events}')
         if has_events:
             (
                 distilled_params,
@@ -1448,6 +1451,7 @@ class Connection(Connectable):
             schema_translate_map=schema_translate_map,
             linting=self.dialect.compiler_linting | compiler.WARN_LINTING,
         )
+        self._log_info(f'compiled_sql: {compiled_sql}')
         ret = self._execute_context(
             dialect,
             dialect.execution_ctx_cls._init_compiled,
@@ -1667,6 +1671,7 @@ class Connection(Connectable):
             if conn is None:
                 conn = self._revalidate_connection()
 
+            self._log_info(f'constructor: {constructor}')
             context = constructor(
                 dialect, self, conn, execution_options, *args, **kw
             )
@@ -1703,6 +1708,7 @@ class Connection(Connectable):
             context.statement,
             context.parameters,
         )
+        self._log_info(f'context info: {(cursor, statement, parameters)}')
 
         if not context.executemany:
             parameters = parameters[0]
@@ -1786,17 +1792,22 @@ class Connection(Connectable):
             result = context._setup_result_proxy()
 
             if not self._is_future:
+                self._log_info('EXECUTING NOT FUTURE')
                 should_close_with_result = branched.should_close_with_result
+                self._log_info(f'should_close_with_result: {should_close_with_result}')
 
                 if not result._soft_closed and should_close_with_result:
                     result._autoclose_connection = True
 
+                self._log_info(f'self._transaction: {self._transaction}')
+                self._log_info(f'context.should_autocommit: {context.should_autocommit}')
                 if (
                     # usually we're in a transaction so avoid relatively
                     # expensive / legacy should_autocommit call
                     self._transaction is None
                     and context.should_autocommit
                 ):
+                    self._log_info('COMMITTING IMPL')
                     self._commit_impl(autocommit=True)
 
                 # for "connectionless" execution, we have to close this
